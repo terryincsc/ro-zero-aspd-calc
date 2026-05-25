@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RO 樂園攻速計算機</title>
+<style>
+  :root {
+    --bg: #fafaf7;
+    --surface: #ffffff;
+    --surface-2: #f1efe8;
+    --border: rgba(0,0,0,0.12);
+    --text: #1a1a18;
+    --text-2: #5f5e5a;
+    --text-3: #888780;
+    --info-bg: #e6f1fb;
+    --info-text: #0c447c;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Helvetica Neue", "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--bg);
+    padding: 24px 16px;
+  }
+  .container { max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 500; margin: 0 0 4px; }
+  .subtitle { font-size: 13px; color: var(--text-2); margin-bottom: 20px; }
+
+  select, input[type=number] {
+    width: 100%;
+    height: 36px;
+    padding: 0 10px;
+    font-size: 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    color: var(--text);
+    box-sizing: border-box;
+    font-family: inherit;
+  }
+  select:hover, input:hover { border-color: rgba(0,0,0,0.25); }
+  select:focus, input:focus { outline: 2px solid #185fa5; outline-offset: -1px; }
+  label.field { display: flex; flex-direction: column; gap: 4px; }
+  .field-label { font-size: 13px; color: var(--text-2); }
+  .top-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .panel {
+    background: var(--surface-2);
+    border-radius: var(--radius-lg);
+    padding: 12px 14px;
+    margin-bottom: 16px;
+  }
+  .panel-title { font-size: 13px; color: var(--text-2); margin-bottom: 10px; }
+  .panel-note { font-size: 12px; color: var(--text-3); margin-top: 10px; line-height: 1.6; }
+  .stat-input-grid {
+    display: grid;
+    grid-template-columns: 70px 1fr 1fr;
+    gap: 8px 12px;
+    align-items: center;
+  }
+  .col-head { font-size: 12px; color: var(--text-3); }
+  .buff-head, .buff-row {
+    display: grid;
+    grid-template-columns: minmax(0,1fr) 120px 56px 60px;
+    gap: 8px;
+    align-items: center;
+    padding: 6px;
+    border-radius: var(--radius-md);
+  }
+  .buff-head { font-size: 12px; color: var(--text-3); padding: 0 6px 4px; }
+  .buff-row.active { background: var(--surface); }
+  .buff-row.inactive { opacity: 0.45; }
+  .buff-row .name { font-size: 13px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .buff-row .num { text-align: right; font-variant-numeric: tabular-nums; font-size: 13px; color: var(--text-2); }
+  .buff-row .num.zero { color: var(--text-3); }
+  select.compact { font-size: 13px; height: 32px; }
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 10px;
+    margin: 4px 0 16px;
+  }
+  .stat { background: var(--surface-2); border-radius: var(--radius-md); padding: 12px 14px; }
+  .stat-label { font-size: 12px; color: var(--text-2); margin-bottom: 4px; }
+  .stat-value { font-size: 18px; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .stat.final { background: var(--info-bg); }
+  .stat.final .stat-label { color: var(--info-text); }
+  .stat.final .stat-value { color: var(--info-text); font-size: 28px; }
+  details { margin-top: 16px; }
+  summary { cursor: pointer; font-size: 13px; color: var(--text-2); padding: 4px 0; }
+  .stats-table {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 4px 16px;
+    font-variant-numeric: tabular-nums;
+    font-size: 13px;
+    margin-top: 10px;
+  }
+  .stats-table .k { color: var(--text-2); }
+
+  /* 工具列 */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    margin-bottom: 16px;
+  }
+  .save-picker {
+    width: auto;
+    min-width: 160px;
+    max-width: 240px;
+    height: 32px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .icon-btn {
+    height: 32px;
+    min-width: 32px;
+    padding: 0 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    cursor: pointer;
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--text);
+  }
+  .icon-btn:hover { background: var(--surface-2); }
+  .save-btn {
+    height: 32px;
+    padding: 0 14px;
+    border: 1px solid var(--info-text);
+    border-radius: var(--radius-md);
+    background: var(--info-bg);
+    color: var(--info-text);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: inherit;
+  }
+  .save-btn:hover { filter: brightness(0.97); }
+  .save-btn.saved { background: var(--surface-2); color: var(--text-2); border-color: var(--border); }
+  .dirty {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #d85a30;
+    display: none;
+  }
+  .dirty.active { display: inline-block; }
+  .menu-wrap { position: relative; }
+  .menu-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    min-width: 160px;
+    padding: 4px;
+    z-index: 100;
+  }
+  .menu-dropdown button {
+    display: block;
+    width: 100%;
+    padding: 8px 10px;
+    border: none;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--text);
+  }
+  .menu-dropdown button:hover { background: var(--surface-2); }
+  .menu-dropdown button.danger { color: #a32d2d; }
+  .menu-dropdown button.danger:hover { background: #fceaea; }
+  .rename-input {
+    height: 32px;
+    min-width: 160px;
+    max-width: 240px;
+    padding: 0 10px;
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid #185fa5;
+    border-radius: var(--radius-md);
+    font-family: inherit;
+    color: var(--text);
+    background: var(--surface);
+    outline: 2px solid rgba(24,95,165,0.2);
+    box-sizing: border-box;
+  }
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a1a18;
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+    z-index: 1000;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="toolbar">
+    <select id="save-picker" class="save-picker"></select>
+    <button id="rename-btn" class="icon-btn" title="改名">✏️</button>
+    <span id="dirty-indicator" class="dirty" title="有未儲存的變更"></span>
+    <div style="flex:1;"></div>
+    <button id="save-btn" class="save-btn">💾 儲存</button>
+    <div class="menu-wrap">
+      <button id="menu-btn" class="icon-btn" title="更多">⋯</button>
+      <div id="menu-dropdown" class="menu-dropdown" hidden>
+        <button data-act="import">匯入 JSON…</button>
+        <button data-act="export">匯出為 JSON</button>
+        <button data-act="delete" class="danger">刪除此存檔</button>
+      </div>
+    </div>
+    <input type="file" id="import-file" accept=".json,application/json" hidden />
+  </div>
+
+  <h1>攻速計算機</h1>
+  <div class="subtitle">RO 樂園 / 依 Excel 公式實作</div>
+
+  <div class="top-grid">
+    <label class="field"><span class="field-label">職業</span><select id="job"></select></label>
+    <label class="field"><span class="field-label">主手裝備</span><select id="mainhand"></select></label>
+    <label class="field"><span class="field-label">副手裝備</span><select id="offhand"></select></label>
+    <label class="field"><span class="field-label">JOB 等級</span><input type="number" id="joblv" value="1" min="0" max="99" step="1" /></label>
+    <label class="field"><span class="field-label">裝備攻速 %</span><input type="number" id="eqaspd" value="0" step="1" /></label>
+    <label class="field"><span class="field-label">固定素質 ASPD</span><input type="number" id="flataspd" value="0" step="1" /></label>
+  </div>
+
+  <div id="results"></div>
+
+  <div class="panel">
+    <div class="panel-title">素質（建議填寫無 Buff 面板素質）</div>
+    <div class="stat-input-grid">
+      <div></div>
+      <div class="col-head">base + 裝備點數</div>
+      <div class="col-head">其他加成（卡片/附魔/寵物）</div>
+      <div style="font-weight:500;">AGI</div>
+      <input type="number" id="agi-base" value="1" step="1" />
+      <input type="number" id="agi-other" value="0" step="1" />
+      <div style="font-weight:500;">DEX</div>
+      <input type="number" id="dex-base" value="1" step="1" />
+      <input type="number" id="dex-other" value="0" step="1" />
+    </div>
+    <div class="panel-note">心神凝聚僅對「base + 裝備點數」那欄套用 ×1.12，不影響卡片/附魔/寵物/Buff。</div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Buff / 技能</div>
+    <div class="buff-head">
+      <div>名稱</div><div>選項</div>
+      <div style="text-align:right;">素值</div>
+      <div style="text-align:right;">ASPD%</div>
+    </div>
+    <div id="buff-rows"></div>
+    <div class="panel-note">不符職業/武器即使勾選也不會生效。純白百合花、慈悲術不與天賜/加速重複計算（取代後者），且不進入 Status Bonus 計算。</div>
+  </div>
+
+  <details>
+    <summary>計算過程明細</summary>
+    <div id="breakdown"></div>
+  </details>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const JOBS = ["服事","弓箭手","魔法師","商人","劍士","盜賊","祭司","武僧","神官","武術宗師","獵人","詩人","舞孃","神射手","搞笑藝人","冷豔舞姬","巫師","賢者","超魔導士","智者","鐵匠","煉金術師","神工匠","創造者","騎士","十字軍","騎士領主","聖殿十字軍","刺客","流氓","十字刺客","神行太保"];
+// 注意：WEAPONS[0]「空手」這欄在 PEN 表裡存的是該職業的 Base ASPD（非懲罰）
+const WEAPONS = ["空手","盾","鈍器","單手杖","雙手杖","短劍","弓","單手劍","雙手劍","單手斧","雙手斧","單手矛","雙手矛","書","拳套","樂器","鞭子","拳刃","無"];
+const PEN = {
+  "服事":[156,-7,-5,-20,-20,null,null,null,null,null,null,null,null,null,null,null,null,null,null],
+  "弓箭手":[156,-9,null,null,null,-15,-10,null,null,null,null,null,null,null,null,null,null,null,null],
+  "魔法師":[146,-10,null,-5,-5,0,null,null,null,null,null,null,null,null,null,null,null,null,null],
+  "商人":[156,-5,-10,null,null,-12,null,-12,null,-8,-15,null,null,null,null,null,null,null,null],
+  "劍士":[156,-5,-10,null,null,-7,null,-7,-14,-15,-20,-17,-25,null,null,null,null,null,null],
+  "盜賊":[156,-6,null,null,null,-8,-13,-10,null,-20,null,null,null,null,null,null,null,null,null],
+  "祭司":[156,-5,-3,-20,-20,null,null,null,null,null,null,null,null,-4,-20,null,null,null,null],
+  "武僧":[156,-3,-3,-20,-18,null,null,null,null,null,null,null,null,null,0,null,null,null,null],
+  "神官":[156,-3,-3,-20,-20,null,null,null,null,null,null,null,null,-4,-20,null,null,null,null],
+  "武術宗師":[156,-3,-3,-20,-18,null,null,null,null,null,null,null,null,null,0,null,null,null,null],
+  "獵人":[156,-9,null,null,null,-13,-7,null,null,null,null,null,null,null,null,null,null,null,null],
+  "詩人":[156,-5,null,null,null,-13,-8,null,null,null,null,null,null,null,null,-5,null,null,null],
+  "舞孃":[156,-5,null,null,null,-13,-8,null,null,null,null,null,null,null,null,null,-5,null,null],
+  "神射手":[156,-9,null,null,null,-13,-7,null,null,null,null,null,null,null,null,null,null,null,null],
+  "搞笑藝人":[156,-5,null,null,null,-13,-8,null,null,null,null,null,null,null,null,-5,null,null,null],
+  "冷豔舞姬":[156,-5,null,null,null,-13,-8,null,null,null,null,null,null,null,null,null,-5,null,null],
+  "巫師":[146,-8,null,-3,-3,-4,null,null,null,null,null,null,null,null,null,null,null,null,null],
+  "賢者":[151,-3,null,-10,-10,-8,null,null,null,null,null,null,null,2,null,null,null,null,null],
+  "超魔導士":[146,-8,null,-3,-3,-4,null,null,null,null,null,null,null,null,null,null,null,null,null],
+  "智者":[151,-3,null,-10,-10,-8,null,null,null,null,null,null,null,2,null,null,null,null,null],
+  "鐵匠":[156,-5,-8,null,null,-10,null,-10,null,-6,-10,null,null,null,null,null,null,null,null],
+  "煉金術師":[156,-4,-5,null,null,-10,null,-5,null,-5,-12,null,null,null,null,null,null,null,null],
+  "神工匠":[156,-5,-8,null,null,-10,null,-10,null,-6,-10,null,null,null,null,null,null,null,null],
+  "創造者":[156,-4,-5,null,null,-10,null,-5,null,-5,-12,null,null,null,null,null,null,null,null],
+  "騎士":[156,-5,-5,null,null,-9,null,-5,-2,-10,-15,-15,-20,null,null,null,null,null,null],
+  "十字軍":[156,-5,-5,null,null,-8,null,-3,-15,-10,-15,-13,-10,null,null,null,null,null,null],
+  "騎士領主":[156,-5,-5,null,null,-9,null,-5,-3,-10,-15,-15,-20,null,null,null,null,null,null],
+  "聖殿十字軍":[156,-5,-5,null,null,-8,null,-3,-15,-10,-15,-13,-10,null,null,null,null,null,null],
+  "刺客":[156,null,null,null,null,-2,null,-10,null,-11,null,null,null,null,null,null,null,-2,null],
+  "刺客(左手)":[null,-6,null,null,null,-10,null,-12,null,-12,null,null,null,null,null,null,null,null,null],
+  "流氓":[156,-3,null,null,null,-5,-10,-10,null,null,null,null,null,null,null,null,null,null,null],
+  "十字刺客":[156,null,null,null,null,-2,null,-10,null,-11,null,null,null,null,null,null,null,-2,null],
+  "十字刺客(左手)":[null,-6,null,null,null,-10,null,-12,null,-12,null,null,null,null,null,null,null,null,null],
+  "神行太保":[156,-3,null,null,null,-5,-10,-10,null,null,null,null,null,null,null,null,null,null,null],
+};
+const TWO_HANDED = new Set(["雙手杖","弓","雙手劍","雙手斧","雙手矛","拳刃"]);
+const SOUL_LINK_JOBS = new Set(["弓箭手","獵人","詩人","舞孃","神射手","搞笑藝人","冷豔舞姬"]);
+const lilyAgi  = j => 12 + Math.floor(j/10);
+const lilyAspd = j => 10 + Math.floor(j/10);
+const mercyDex = j => 10 + Math.floor(j/10);
+
+const BUFFS = [
+  { id:"potion", name:"攻速藥水", options:["無","集中藥水","覺醒藥水","菠色克藥水"],
+    compute: (ctx) => {
+      const t = ctx.buffVals.potion;
+      if (t === "集中藥水")   return { agi:0, dex:0, mod:4, aspdPct:0 };
+      if (t === "覺醒藥水")   return { agi:0, dex:0, mod:6, aspdPct:0 };
+      if (t === "菠色克藥水") return { agi:0, dex:0, mod:9, aspdPct:0 };
+      return { agi:0, dex:0, mod:0, aspdPct:0 };
+    }},
+  { id:"angel",    name:"天使之賜福", compute: ()=> ({ agi:0, dex:10, mod:0, aspdPct:0 }) },
+  { id:"agiup",    name:"加速術",     compute: ()=> ({ agi:12, dex:0, mod:0, aspdPct:10 }) },
+  { id:"soulLink", name:"心神凝聚",   jobLimit:SOUL_LINK_JOBS, compute: ()=> ({ mod:0, aspdPct:0 }) },
+  { id:"adusk",    name:"刺客的黃昏", compute: ()=> ({ agi:0, dex:0, mod:0, aspdPct:20 }) },
+  { id:"music",    name:"操控樂器",   jobLimit:new Set(["詩人","搞笑藝人"]),
+    compute: ()=> ({ agi:0, dex:0, mod:0, aspdPct:10 }) },
+  { id:"book",     name:"進化之書",   jobLimit:new Set(["賢者","智者"]), weaponLimit:new Set(["書"]),
+    compute: ()=> ({ agi:0, dex:0, mod:5, aspdPct:0 }) },
+  { id:"adrenSelf",name:"速度激發(自身)", jobLimit:new Set(["鐵匠","神工匠"]),
+    weaponLimit:new Set(["單手斧","雙手斧","鈍器"]),
+    compute: ()=> ({ agi:0, dex:0, mod:7, aspdPct:10 }) },
+  { id:"adrenAlly",name:"速度激發(隊友)", weaponLimit:new Set(["單手斧","雙手斧","鈍器"]),
+    compute: ()=> ({ agi:0, dex:0, mod:6, aspdPct:10 }) },
+  { id:"twoQuick", name:"雙手劍加速", jobLimit:new Set(["騎士","騎士領主"]),
+    weaponLimit:new Set(["雙手劍"]), compute: ()=> ({ agi:0, dex:0, mod:7, aspdPct:10 }) },
+  { id:"spear",    name:"長矛加速",   jobLimit:new Set(["十字軍","聖殿十字軍"]),
+    weaponLimit:new Set(["單手矛","雙手矛"]), compute: ()=> ({ agi:0, dex:0, mod:7, aspdPct:10 }) },
+  { id:"mercy",    name:"慈悲術", excludeFromStatus: true,
+    compute: (ctx)=> ({ agi:0, dex:mercyDex(ctx.joblv), mod:0, aspdPct:0 }) },
+  { id:"lily",     name:"純白百合花", excludeFromStatus: true,
+    compute: (ctx)=> ({ agi:lilyAgi(ctx.joblv), dex:0, mod:0, aspdPct:lilyAspd(ctx.joblv) }) },
+  { id:"backstab", name:"背刺", jobLimit:new Set(["流氓"]),
+    compute: ()=> ({ agi:0, dex:0, mod:10, aspdPct:0 }) },
+];
+
+// 新檔預設值
+function makeDefaultState() {
+  const s = {
+    job:"劍士", mainhand:"空手", offhand:"無",
+    joblv:1, eqaspd:0, flataspd:0,
+    agiBase:1, agiOther:0, dexBase:1, dexOther:0,
+    buffVals: { potion:"無" }
+  };
+  BUFFS.forEach(b => { if (b.id !== "potion") s.buffVals[b.id] = false; });
+  return s;
+}
+
+const state = makeDefaultState();
+
+// ===== 存檔管理 =====
+const STORAGE_KEY = "ro_aspd_saves_v1";
+const META_KEY    = "ro_aspd_meta_v1";
+
+let saves = {};         // { name: stateObject }
+let currentName = "";   // 目前選中的存檔名
+let dirty = false;      // 有未儲存變更
+
+function loadSaves() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    saves = raw ? JSON.parse(raw) : {};
+  } catch (e) { saves = {}; }
+  try {
+    const meta = JSON.parse(localStorage.getItem(META_KEY) || "{}");
+    currentName = meta.current || "";
+  } catch (e) { currentName = ""; }
+}
+function persistSaves() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(saves));
+  localStorage.setItem(META_KEY, JSON.stringify({ current: currentName }));
+}
+function nextDefaultName() {
+  let i = 1;
+  while (saves["新的攻速表" + i]) i++;
+  return "新的攻速表" + i;
+}
+function applyState(newState) {
+  Object.keys(newState).forEach(k => {
+    if (k === "buffVals") {
+      state.buffVals = { potion: "無" };
+      BUFFS.forEach(b => { if (b.id !== "potion") state.buffVals[b.id] = false; });
+      Object.assign(state.buffVals, newState.buffVals || {});
+    } else {
+      state[k] = newState[k];
+    }
+  });
+}
+function snapshotState() {
+  return JSON.parse(JSON.stringify(state));
+}
+function markDirty() {
+  dirty = true;
+  document.getElementById("dirty-indicator").classList.add("active");
+  const btn = document.getElementById("save-btn");
+  btn.classList.remove("saved");
+  btn.textContent = "💾 儲存";
+}
+function markClean() {
+  dirty = false;
+  document.getElementById("dirty-indicator").classList.remove("active");
+  const btn = document.getElementById("save-btn");
+  btn.classList.add("saved");
+  btn.textContent = "✓ 已儲存";
+}
+function toast(msg) {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => el.classList.remove("show"), 1500);
+}
+
+function availableWeapons(job) {
+  // 主手清單：盾不能當主手；空手永遠允許（徒手戰鬥）
+  const list = ["空手"];
+  WEAPONS.forEach(w => {
+    if (w === "空手" || w === "盾") return;
+    if (PEN[job] && PEN[job][WEAPONS.indexOf(w)] != null) list.push(w);
+  });
+  return list;
+}
+function availableOffhands(job, mainhand) {
+  if (TWO_HANDED.has(mainhand)) return ["無"];
+  const list = ["無","盾"];
+  if (job === "刺客" || job === "十字刺客") ["短劍","單手劍","單手斧"].forEach(w => list.push(w));
+  return list;
+}
+// 主手武器懲罰：空手 = 0；其他從表抓
+function getMainPenalty(job, weapon) {
+  if (weapon === "空手") return 0;
+  const i = WEAPONS.indexOf(weapon);
+  if (i < 0 || !PEN[job]) return 0;
+  const v = PEN[job][i];
+  return v == null ? 0 : v;
+}
+function getBaseAspd(job) {
+  if (!PEN[job]) return 156;
+  const v = PEN[job][0];
+  return v == null ? 156 : v;
+}
+function getOffPenalty(job, off) {
+  if (off === "無") return 0;
+  const i = WEAPONS.indexOf(off);
+  if (i < 0) return 0;
+  if ((job === "刺客" || job === "十字刺客") && off !== "盾") {
+    const row = PEN[job + "(左手)"];
+    return row && row[i] != null ? row[i] : 0;
+  }
+  const row = PEN[job];
+  return row && row[i] != null ? row[i] : 0;
+}
+function buffActive(buff) {
+  if (buff.id === "potion") return state.buffVals.potion !== "無";
+  if (!state.buffVals[buff.id]) return false;
+  if (buff.jobLimit && !buff.jobLimit.has(state.job)) return false;
+  if (buff.weaponLimit && !buff.weaponLimit.has(state.mainhand)) return false;
+  return true;
+}
+
+function renderJobSelect() {
+  document.getElementById("job").innerHTML = JOBS.map(j =>
+    `<option value="${j}"${j===state.job?" selected":""}>${j}</option>`).join("");
+}
+function renderWeaponSelects() {
+  const mh = document.getElementById("mainhand");
+  const list = availableWeapons(state.job);
+  if (!list.includes(state.mainhand)) state.mainhand = list[0];
+  mh.innerHTML = list.map(w => `<option value="${w}"${w===state.mainhand?" selected":""}>${w}</option>`).join("");
+  const oh = document.getElementById("offhand");
+  const ohlist = availableOffhands(state.job, state.mainhand);
+  if (!ohlist.includes(state.offhand)) state.offhand = "無";
+  oh.innerHTML = ohlist.map(w => `<option value="${w}"${w===state.offhand?" selected":""}>${w}</option>`).join("");
+}
+function renderBuffs() {
+  const root = document.getElementById("buff-rows");
+  const ctx = { job:state.job, mainhand:state.mainhand, joblv:state.joblv, buffVals:state.buffVals };
+  let html = "";
+  BUFFS.forEach(b => {
+    const restrictedOut = (b.jobLimit && !b.jobLimit.has(state.job)) ||
+                          (b.weaponLimit && !b.weaponLimit.has(state.mainhand));
+    const sample = b.compute(ctx);
+    const active = buffActive(b);
+    const cls = "buff-row " + (active ? "active" : (restrictedOut ? "inactive" : ""));
+    let control;
+    if (b.id === "potion") {
+      control = `<select data-buff="potion" class="compact">${b.options.map(o =>
+        `<option value="${o}"${state.buffVals.potion===o?" selected":""}>${o}</option>`).join("")}</select>`;
+    } else {
+      const v = state.buffVals[b.id] ? "是" : "否";
+      control = `<select data-buff="${b.id}" class="compact"${restrictedOut?" disabled":""}>` +
+                `<option value="否"${v==="否"?" selected":""}>否</option>` +
+                `<option value="是"${v==="是"?" selected":""}>是</option></select>`;
+    }
+    let mod = 0, pct = 0;
+    if (active) { mod = sample.mod || 0; pct = sample.aspdPct || 0; }
+    const tag = restrictedOut ? ` <span style="font-size:11px; color:var(--text-3);">(不符)</span>` : "";
+    html += `<div class="${cls}"><div class="name">${b.name}${tag}</div>${control}` +
+            `<div class="num ${mod===0?"zero":""}">${mod===0?"—":mod}</div>` +
+            `<div class="num ${pct===0?"zero":""}">${pct===0?"—":pct+"%"}</div></div>`;
+  });
+  root.innerHTML = html;
+  root.querySelectorAll("select[data-buff]").forEach(el => {
+    el.addEventListener("change", () => {
+      const id = el.dataset.buff;
+      if (id === "potion") state.buffVals.potion = el.value;
+      else state.buffVals[id] = (el.value === "是");
+      update(true);
+    });
+  });
+}
+
+function calc() {
+  const ctx = { job:state.job, mainhand:state.mainhand, joblv:state.joblv, buffVals:state.buffVals };
+  const soulLinkActive = buffActive(BUFFS.find(b=>b.id==="soulLink"));
+  const lilyOn  = buffActive(BUFFS.find(b=>b.id==="lily"));
+  const mercyOn = buffActive(BUFFS.find(b=>b.id==="mercy"));
+  const agiupOn = buffActive(BUFFS.find(b=>b.id==="agiup"));
+  const angelOn = buffActive(BUFFS.find(b=>b.id==="angel"));
+
+  let buffAgi = 0, buffDex = 0;
+  if (lilyOn) buffAgi = lilyAgi(state.joblv);
+  else if (agiupOn) buffAgi = 12;
+  if (mercyOn) buffDex = mercyDex(state.joblv);
+  else if (angelOn) buffDex = 10;
+
+  const agiTotal = (soulLinkActive ? state.agiBase * 1.12 : state.agiBase) + state.agiOther + buffAgi;
+  const dexTotal = (soulLinkActive ? state.dexBase * 1.12 : state.dexBase) + state.dexOther + buffDex;
+
+  let modSum = 0;
+  BUFFS.forEach(b => {
+    if (b.excludeFromStatus) return;
+    if (!buffActive(b)) return;
+    const r = b.compute(ctx);
+    modSum += r.mod || 0;
+  });
+
+  let aspdPctSum = 0;
+  BUFFS.forEach(b => {
+    if (!buffActive(b)) return;
+    if (b.id === "agiup" && lilyOn) return;
+    const r = b.compute(ctx);
+    aspdPctSum += r.aspdPct || 0;
+  });
+
+  const baseAspd = getBaseAspd(state.job);
+  const weaponPen = getMainPenalty(state.job, state.mainhand);
+  const shieldPen = getOffPenalty(state.job, state.offhand);
+  const isRanged = (state.mainhand === "弓" || state.mainhand === "樂器" || state.mainhand === "鞭子");
+  const statBonus = isRanged
+    ? Math.sqrt(dexTotal*dexTotal/7 + agiTotal*agiTotal/2) / 4
+    : Math.sqrt(dexTotal*dexTotal/5 + agiTotal*agiTotal/2) / 4;
+  const statusBonus = modSum * agiTotal / 200;
+  const aspd1 = Math.floor(baseAspd + weaponPen + shieldPen + statBonus + statusBonus);
+  const totalAspdPct = state.eqaspd + aspdPctSum;
+  const aspd2 = Math.floor(aspd1 + (195 - aspd1) * (totalAspdPct / 100));
+  const finalAspd = aspd2 + state.flataspd;
+
+  return { soulLinkActive, buffAgi, buffDex, modSum, aspdPctSum, totalAspdPct,
+           agiTotal, dexTotal, baseAspd, weaponPen, shieldPen,
+           statBonus, statusBonus, aspd1, aspd2, finalAspd, isRanged };
+}
+
+function renderResults(r) {
+  document.getElementById("results").innerHTML =
+    `<div class="stat-grid">
+      <div class="stat"><div class="stat-label">Base ASPD</div><div class="stat-value">${r.baseAspd}</div></div>
+      <div class="stat"><div class="stat-label">武器懲罰</div><div class="stat-value">${r.weaponPen}</div></div>
+      <div class="stat"><div class="stat-label">副手懲罰</div><div class="stat-value">${r.shieldPen}</div></div>
+      <div class="stat"><div class="stat-label">ASPD1</div><div class="stat-value">${r.aspd1}</div></div>
+      <div class="stat"><div class="stat-label">ASPD2</div><div class="stat-value">${r.aspd2}</div></div>
+      <div class="stat final"><div class="stat-label">最終 ASPD</div><div class="stat-value">${r.finalAspd}</div></div>
+    </div>`;
+}
+function renderBreakdown(r) {
+  document.getElementById("breakdown").innerHTML =
+    `<div class="stats-table">
+      <div class="k">心神凝聚</div><div>${r.soulLinkActive ? "啟用（base ×1.12）" : "未啟用"}</div>
+      <div class="k">AGI 總計</div><div>${r.agiTotal.toFixed(2)}（buff +${r.buffAgi}）</div>
+      <div class="k">DEX 總計</div><div>${r.dexTotal.toFixed(2)}（buff +${r.buffDex}）</div>
+      <div class="k">Stat Bonus</div><div>${r.statBonus.toFixed(4)}（${r.isRanged?"弓/樂器/鞭子":"近戰"}）</div>
+      <div class="k">Status Bonus</div><div>${r.statusBonus.toFixed(4)} = Σmod ${r.modSum} × AGI/200</div>
+      <div class="k">總 ASPD %</div><div>裝備 ${state.eqaspd}% + Buff ${r.aspdPctSum}% = ${r.totalAspdPct}%</div>
+      <div class="k">ASPD1</div><div>FLOOR(${r.baseAspd} + ${r.weaponPen} + ${r.shieldPen} + ${r.statBonus.toFixed(2)} + ${r.statusBonus.toFixed(2)}) = ${r.aspd1}</div>
+      <div class="k">ASPD2</div><div>FLOOR(${r.aspd1} + (195 − ${r.aspd1}) × ${r.totalAspdPct}%) = ${r.aspd2}</div>
+      <div class="k">最終</div><div>${r.aspd2} + ${state.flataspd} = ${r.finalAspd}</div>
+    </div>`;
+}
+function update(dirtyMark) {
+  renderBuffs();
+  const r = calc();
+  renderResults(r);
+  renderBreakdown(r);
+  if (dirtyMark) markDirty();
+}
+
+// 把 state 寫回畫面上的輸入框（切換存檔時用）
+function syncInputsFromState() {
+  document.getElementById("joblv").value    = state.joblv;
+  document.getElementById("eqaspd").value   = state.eqaspd;
+  document.getElementById("flataspd").value = state.flataspd;
+  document.getElementById("agi-base").value  = state.agiBase;
+  document.getElementById("agi-other").value = state.agiOther;
+  document.getElementById("dex-base").value  = state.dexBase;
+  document.getElementById("dex-other").value = state.dexOther;
+  document.getElementById("job").value = state.job;
+  renderWeaponSelects(); // 會自動處理 mainhand/offhand 的值
+}
+
+function bind() {
+  document.getElementById("job").addEventListener("change", e => {
+    state.job = e.target.value; renderWeaponSelects(); update(true);
+  });
+  document.getElementById("mainhand").addEventListener("change", e => {
+    state.mainhand = e.target.value; renderWeaponSelects(); update(true);
+  });
+  document.getElementById("offhand").addEventListener("change", e => {
+    state.offhand = e.target.value; update(true);
+  });
+  [["joblv","joblv"],["eqaspd","eqaspd"],["flataspd","flataspd"],
+   ["agi-base","agiBase"],["agi-other","agiOther"],
+   ["dex-base","dexBase"],["dex-other","dexOther"]].forEach(([id,key]) => {
+    document.getElementById(id).addEventListener("input", e => {
+      const v = Number(e.target.value);
+      state[key] = isNaN(v) ? 0 : v;
+      update(true);
+    });
+  });
+}
+
+// ===== 存檔工具列 =====
+function refreshPicker() {
+  const sel = document.getElementById("save-picker");
+  const names = Object.keys(saves);
+  let html = names.map(n => `<option value="${n}"${n===currentName?" selected":""}>${n}</option>`).join("");
+  html += `<option value="__new__">+ 新增存檔</option>`;
+  sel.innerHTML = html;
+}
+
+function confirmDiscardIfDirty() {
+  if (!dirty) return true;
+  return confirm("有未儲存的變更，確定要捨棄並繼續嗎？");
+}
+
+function switchTo(name) {
+  if (!saves[name]) return;
+  currentName = name;
+  applyState(saves[name]);
+  syncInputsFromState();
+  update(false);
+  markClean();
+  refreshPicker();
+  persistSaves();
+}
+
+function createNewSave() {
+  const name = nextDefaultName();
+  saves[name] = makeDefaultState();
+  currentName = name;
+  persistSaves();
+  applyState(saves[name]);
+  syncInputsFromState();
+  update(false);
+  markClean();
+  refreshPicker();
+}
+
+function handleSave() {
+  if (!currentName) return;
+  saves[currentName] = snapshotState();
+  persistSaves();
+  markClean();
+  toast("已儲存：" + currentName);
+}
+
+function handleRename() {
+  const nv = prompt("輸入新的存檔名稱：", currentName);
+  if (nv === null) return;          // 取消
+  const name = nv.trim();
+  if (!name) { toast("名稱不可為空"); return; }
+  if (name === currentName) return; // 沒改
+  if (saves[name]) { toast("已有同名存檔"); return; }
+  saves[name] = saves[currentName];
+  delete saves[currentName];
+  currentName = name;
+  persistSaves();
+  refreshPicker();
+  toast("已改名");
+}
+
+function handleExport() {
+  if (!currentName) return;
+  const data = { name: currentName, state: saves[currentName] || snapshotState(), version: 1 };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = currentName + ".json";
+  a.click();
+  URL.revokeObjectURL(url);
+  toast("已匯出：" + currentName + ".json");
+}
+
+function handleImport(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      const importedState = data.state || data; // 容忍兩種格式
+      let name = data.name || "匯入的攻速表";
+      // 重名加 (2)
+      if (saves[name]) {
+        let i = 2;
+        while (saves[name + " (" + i + ")"]) i++;
+        name = name + " (" + i + ")";
+      }
+      saves[name] = importedState;
+      currentName = name;
+      persistSaves();
+      applyState(importedState);
+      syncInputsFromState();
+      update(false);
+      markClean();
+      refreshPicker();
+      toast("已匯入：" + name);
+    } catch (e) {
+      alert("匯入失敗：JSON 格式錯誤");
+    }
+  };
+  reader.readAsText(file);
+}
+
+function handleDelete() {
+  if (!currentName) return;
+  if (!confirm(`確定要刪除「${currentName}」嗎？`)) return;
+  delete saves[currentName];
+  const remaining = Object.keys(saves);
+  if (remaining.length === 0) {
+    createNewSave();
+  } else {
+    currentName = remaining[0];
+    applyState(saves[currentName]);
+    syncInputsFromState();
+    update(false);
+    markClean();
+    refreshPicker();
+    persistSaves();
+  }
+  toast("已刪除");
+}
+
+function bindToolbar() {
+  document.getElementById("save-picker").addEventListener("change", e => {
+    const v = e.target.value;
+    if (v === "__new__") {
+      if (!confirmDiscardIfDirty()) { refreshPicker(); return; }
+      createNewSave();
+    } else {
+      if (!confirmDiscardIfDirty()) { refreshPicker(); return; }
+      switchTo(v);
+    }
+  });
+  document.getElementById("rename-btn").addEventListener("click", handleRename);
+  document.getElementById("save-btn").addEventListener("click", handleSave);
+
+  // 選單
+  const menuBtn = document.getElementById("menu-btn");
+  const menu = document.getElementById("menu-dropdown");
+  menuBtn.addEventListener("click", e => {
+    e.stopPropagation();
+    menu.hidden = !menu.hidden;
+  });
+  document.addEventListener("click", () => { menu.hidden = true; });
+  menu.addEventListener("click", e => {
+    const act = e.target.dataset.act;
+    if (!act) return;
+    menu.hidden = true;
+    if (act === "import") document.getElementById("import-file").click();
+    else if (act === "export") handleExport();
+    else if (act === "delete") handleDelete();
+  });
+  document.getElementById("import-file").addEventListener("change", e => {
+    const f = e.target.files[0];
+    if (f) handleImport(f);
+    e.target.value = ""; // reset 讓同檔可重選
+  });
+
+  // Cmd/Ctrl+S 儲存
+  document.addEventListener("keydown", e => {
+    if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+      e.preventDefault();
+      handleSave();
+    }
+  });
+}
+
+// ===== 初始化 =====
+renderJobSelect();
+loadSaves();
+if (Object.keys(saves).length === 0) {
+  // 第一次使用，建立預設新檔
+  const name = "新的攻速表1";
+  saves[name] = makeDefaultState();
+  currentName = name;
+  persistSaves();
+}
+if (!saves[currentName]) currentName = Object.keys(saves)[0];
+applyState(saves[currentName]);
+syncInputsFromState();
+bind();
+bindToolbar();
+update(false);
+markClean();
+refreshPicker();
+</script>
+</body>
+</html>
