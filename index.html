@@ -365,7 +365,7 @@ const BUFFS = [
     compute: (ctx)=> ({ agi:0, dex:mercyDex(ctx.joblv), mod:0, aspdPct:0 }) },
   { id:"lily",     name:"純白百合花", excludeFromStatus: true,
     compute: (ctx)=> ({ agi:lilyAgi(ctx.joblv), dex:0, mod:0, aspdPct:lilyAspd(ctx.joblv) }) },
-  { id:"backstab", name:"背刺", jobLimit:new Set(["流氓"]),
+  { id:"backstab", name:"抄襲", jobLimit:new Set(["流氓"]),
     compute: ()=> ({ agi:0, dex:0, mod:10, aspdPct:0 }) },
 ];
 
